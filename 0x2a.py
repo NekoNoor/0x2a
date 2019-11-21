@@ -242,8 +242,8 @@ def print_help():
     print(f'{blue} -h            print help and exit{default}')
     print(f'{blue} -c {orange}<cursus>{blue}   check who finished all projects in {orange}<cursus>{default}')
     print(f'{blue} -p {orange}<projects>{blue} check who finished {orange}<projects>{blue} (list seperated by commas){default}')
-    print(f'{blue} -l {orange}<user>{blue}     see logtimes for {orange}<user>{default}')
-    print(f'{blue} -w {orange}<user>{blue}     see weektime for {orange}<user>{default}')
+    print(f'{blue} -l {orange}<users>{blue}    see logtimes for {orange}<users>{blue} (list seperated by commas){default}')
+    print(f'{blue} -w {orange}<users>{blue}    see weektime for {orange}<users>{blue} (list seperated by commas){default}')
 
 async def main(argv):
     if authed == False:

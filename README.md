@@ -14,8 +14,8 @@ this is a simple tool to access the 42 api
 
 - show who has completed projects in a certain cursus
 - show who has completed projects from a list of projects
-- get the logtime of a certain user per day
-- get the logtime of a certain user in the current week
+- get the daily logtime of a list of users
+- get the current weekly logtime of a list of users
 
 ### to use:
 
