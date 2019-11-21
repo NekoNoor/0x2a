@@ -173,16 +173,19 @@ async def get_vpc_users():
         vela_users = load_json_from_file(velafile)
     else:
         vela_users = await get_coalition_users('42cursus-amsterdam-vela')
+        vela_users += await get_coalition_users('vela')
         dump_json_to_file(vela_users, velafile)
     if os.path.isfile(pyxisfile):
         pyxis_users = load_json_from_file(pyxisfile)
     else:
         pyxis_users = await get_coalition_users('42cursus-amsterdam-pyxis')
+        pyxis_users += await get_coalition_users('pyxis')
         dump_json_to_file(pyxis_users, pyxisfile)
     if os.path.isfile(cetusfile):
         cetus_users = load_json_from_file(cetusfile)
     else:
         cetus_users = await get_coalition_users('42cursus-amsterdam-cetus')
+        cetus_users += await get_coalition_users('cetus')
         dump_json_to_file(cetus_users, cetusfile)
     return vela_users, pyxis_users, cetus_users
 
@@ -239,12 +242,15 @@ async def print_finished(project_users):
     print(f'{red}fail:\n{red}{scores[0][1]:>3d}{purple}{scores[1][1]:>3d}{blue}{scores[2][1]:>3d}{white}')
     print(f'{orange}total:\n{red}{scores[0][2]:>3d}{purple}{scores[1][2]:>3d}{blue}{scores[2][2]:>3d}{white}\n')
 
-async def print_all_projects():
-    if os.path.isfile(projectsfile):
-        projects = load_json_from_file(projectsfile)
+async def print_all_projects(projects = [], cursus='42cursus'):
+    if projects != []:
+        projects = [(name, name) for name in projects]
     else:
-        projects = await get_projects('42cursus')
-        dump_json_to_file(projects, projectsfile)
+        if os.path.isfile(f'{cursus}_{projectsfile}'):
+            projects = load_json_from_file(f'{cursus}_{projectsfile}')
+        else:
+            projects = await get_projects(cursus)
+            dump_json_to_file(projects, f'{cursus}_{projectsfile}')
     for proj in projects:
         project_users = await get_project_users(proj[1])
         if project_users == []:
@@ -254,27 +260,28 @@ async def print_all_projects():
         await print_finished(project_users)
 
 async def print_logtime(user):
-    print(f'logtime for {user}')
+    print(f'{orange}{user}{white} {cyan}logtime{white}:')
     user_locations = await get_user_locations(user)
     for key in user_locations:
-        print(f'{key}: {user_locations[key]}')
+        print(f'{purple}{key}{white}: {blue}{user_locations[key]}{white}')
 
 async def print_week_hours(user):
-    print(f'week hours for {user}')
-    print(await get_week_logtime(user))
+    print(f'{orange}{user} {cyan}hours this week{white}:')
+    print(f'{blue}{await get_week_logtime(user)}{white}')
 
 def print_help():
-    print(f'usage: {sys.argv[0]} (-h|-p|-l|-w)')
-    print(' -h        print help and exit')
-    print(' -p        print who finished what projects')
-    print(' -l <user> print logtime of a certain user')
-    print(' -w <user> print hours in the week of a certain user')
+    print(f'{purple}usage{white}: {red}{sys.argv[0]} {cyan}followed by any number of the following arguments{white}')
+    print(f'{blue} -h            print help and exit{white}')
+    print(f'{blue} -c {orange}<cursus>{blue}   check who finished all projects in {orange}<cursus>{white}')
+    print(f'{blue} -p {orange}<projects>{blue} check who finished {orange}<projects>{blue} (list seperated by commas){white}')
+    print(f'{blue} -l {orange}<user>{blue}     see logtimes for {orange}<user>{white}')
+    print(f'{blue} -w {orange}<user>{blue}     see weektime for {orange}<user>{white}')
 
 async def main(argv):
     if authed == False:
         get_auth_token()
     try:
-        opts, args = getopt.getopt(argv, "hpl:w:")
+        opts, args = getopt.getopt(argv, "hc:p:l:w:")
     except getopt.GetoptError:
         print_help()
         sys.exit(1)
@@ -282,8 +289,10 @@ async def main(argv):
         if opt == '-h':
             print_help()
             sys.exit()
+        elif opt == '-c':
+            await print_all_projects(cursus=arg)
         elif opt == '-p':
-            await print_all_projects()
+            await print_all_projects(arg.split(','))
         elif opt == '-l':
             await print_logtime(arg)
         elif opt == '-w':
