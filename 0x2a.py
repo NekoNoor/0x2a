@@ -6,6 +6,7 @@ from dateutil.tz import tzutc
 from datetime import datetime, timedelta
 import requests
 import asyncio
+import getopt
 import math
 import time
 import json
@@ -238,13 +239,7 @@ async def print_finished(project_users):
     print(f'{red}fail:\n{red}{scores[0][1]:>3d}{purple}{scores[1][1]:>3d}{blue}{scores[2][1]:>3d}{white}')
     print(f'{orange}total:\n{red}{scores[0][2]:>3d}{purple}{scores[1][2]:>3d}{blue}{scores[2][2]:>3d}{white}\n')
 
-async def main():
-    if authed == False:
-        get_auth_token()
-    if len(sys.argv) > 1:
-        project_users = await get_project_users(sys.argv[1])
-        await print_finished(project_users)
-        return
+async def print_all_projects():
     if os.path.isfile(projectsfile):
         projects = load_json_from_file(projectsfile)
     else:
@@ -258,5 +253,42 @@ async def main():
             print(f'({cyan}{proj[0]}{white}){orange}{0:>{width}}{white}')
         await print_finished(project_users)
 
+async def print_logtime(user):
+    print(f'logtime for {user}')
+    user_locations = await get_user_locations(user)
+    for key in user_locations:
+        print(f'{key}: {user_locations[key]}')
+
+async def print_week_hours(user):
+    print(f'week hours for {user}')
+    print(await get_week_logtime(user))
+
+def print_help():
+    print(f'usage: {sys.argv[0]} (-h|-p|-l|-w)')
+    print(' -h        print help and exit')
+    print(' -p        print who finished what projects')
+    print(' -l <user> print logtime of a certain user')
+    print(' -w <user> print hours in the week of a certain user')
+
+async def main(argv):
+    if authed == False:
+        get_auth_token()
+    try:
+        opts, args = getopt.getopt(argv, "hpl:w:")
+    except getopt.GetoptError:
+        print_help()
+        sys.exit(1)
+    for opt, arg in opts:
+        if opt == '-h':
+            print_help()
+            sys.exit()
+        elif opt == '-p':
+            await print_all_projects()
+        elif opt == '-l':
+            await print_logtime(arg)
+        elif opt == '-w':
+            await print_week_hours(arg)
+    sys.exit()
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(sys.argv[1:]))
