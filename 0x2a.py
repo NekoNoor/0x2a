@@ -231,8 +231,8 @@ async def print_finished(project_users):
     fail_lst = [(score, username, user_id) for (score, username, user_id) in
             users_lst if score < 100]
     project_name = project_users[0]["project"]["name"]
-    width = 20 - (len(project_name) + 2)
-    print(f'({cyan}{project_name}{white}){green}{len(valid_lst):>{width}}{red}{len(fail_lst):>3d}{orange}{len(users_lst):>3d}{white}')
+    width = 25 - (len(project_name) + 2)
+    print(f'({cyan}{project_name}{white}){green}{len(valid_lst):>{width}}{red}{len(fail_lst):>4d}{orange}{len(users_lst):>4d}{white}')
     scores = ([0, 0], [0, 0], [0, 0])
     scores = await print_users(valid_lst, scores)
     scores = await print_users(fail_lst, scores)
@@ -242,7 +242,7 @@ async def print_finished(project_users):
     print(f'{red}fail:\n{red}{scores[0][1]:>3d}{purple}{scores[1][1]:>3d}{blue}{scores[2][1]:>3d}{white}')
     print(f'{orange}total:\n{red}{scores[0][2]:>3d}{purple}{scores[1][2]:>3d}{blue}{scores[2][2]:>3d}{white}\n')
 
-async def print_all_projects(projects = [], cursus='42cursus'):
+async def print_projects(projects = [], cursus='42cursus'):
     if projects != []:
         projects = [(name, name) for name in projects]
     else:
@@ -255,7 +255,7 @@ async def print_all_projects(projects = [], cursus='42cursus'):
         project_users = await get_project_users(proj[1])
         if project_users == []:
             project_name = proj[0]
-            width = 20 - (len(project_name) + 2) + 6
+            width = 27 - (len(project_name) + 2) + 6
             print(f'({cyan}{proj[0]}{white}){orange}{0:>{width}}{white}')
         await print_finished(project_users)
 
@@ -265,7 +265,7 @@ async def print_logtime(user):
     for key in user_locations:
         print(f'{purple}{key}{white}: {blue}{user_locations[key]}{white}')
 
-async def print_week_hours(user):
+async def print_weektime(user):
     print(f'{orange}{user} {cyan}hours this week{white}:')
     print(f'{blue}{await get_week_logtime(user)}{white}')
 
@@ -290,13 +290,13 @@ async def main(argv):
             print_help()
             sys.exit()
         elif opt == '-c':
-            await print_all_projects(cursus=arg)
+            await print_projects(cursus=arg)
         elif opt == '-p':
-            await print_all_projects(arg.split(','))
+            await print_projects(arg.split(','))
         elif opt == '-l':
             await print_logtime(arg)
         elif opt == '-w':
-            await print_week_hours(arg)
+            await print_weektime(arg)
     sys.exit()
 
 if __name__ == "__main__":
