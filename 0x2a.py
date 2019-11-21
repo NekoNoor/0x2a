@@ -15,11 +15,6 @@ import os
 
 authfile = 'auth.json'
 configfile = 'config.json'
-projectsfile = 'projects.json'
-
-velafile = 'vela.json'
-pyxisfile = 'pyxis.json'
-cetusfile = 'cetus.json'
 
 def load_json_from_file(filename):
     f = open(filename, 'r')
@@ -41,6 +36,7 @@ else:
 
 api_url = 'https://api.intra.42.fr'
 campus_id = 14
+defaultparams = {'page[size]': 100}
 
 auth_header = {}
 auth_data = {'grant_type': 'client_credentials', 'client_id': uid, 
@@ -56,13 +52,14 @@ if os.path.isfile(authfile):
 else:
     authed = False
 
-white = '\033[0m'
+default = '\033[0m'
 red = '\033[91m'
 green = '\033[92m'
 orange = '\033[93m'
 blue = '\033[94m'
 purple = '\033[95m'
 cyan = '\033[96m'
+white = '\033[96m'
 
 async def limited(until):
     duration = int(round(until - time.time()))
@@ -77,85 +74,79 @@ def get_auth_token():
     dump_json_to_file(auth, authfile)
     auth_header['Authorization'] = f'Bearer {auth["access_token"]}'
 
-async def get_data(endpoint, params):
+async def get_data(endpoint, params = {}):
+    params.update(defaultparams)
     async with rate_limiter:
         r = requests.get(f'{api_url}{endpoint}', params, headers = auth_header)
     if r.status_code != 200:
         raise Exception(f'API response: {r.status_code}')
-    return json.loads(r.text)
+    data = json.loads(r.text)
+    pages = math.ceil(int(r.headers['X-Total']) / int(r.headers['X-Per-Page']))
+    if pages == 1:
+        return data
+    data_list = [item for item in data]
+    for n in range(2, pages):
+        params.update({'page[number]': n})
+        async with rate_limiter:
+            r = requests.get(f'{api_url}{endpoint}', params, headers = auth_header)
+        if r.status_code != 200:
+            raise Exception(f'API response: {r.status_code}')
+        data = json.loads(r.text)
+        for item in data:
+            data_list.append(item)
+    return data_list
 
 async def get_projects(cursus):
-    projects = await get_data(f'/v2/cursus/{cursus}/projects', 
-            {'page[size]': 100})
-    projlist = []
-    for proj in projects:
-        projlist.append((proj['name'], proj['slug']))
-    return projlist
-
+    if os.path.isfile(f'{cursus}_projects.json'):
+        projects = load_json_from_file(f'{cursus}_projects.json')
+    else:
+        projects = [proj['slug'] for proj in await get_data(f'/v2/cursus/{cursus}/projects')]
+        dump_json_to_file(projects, f'{cursus}_projects.json')
+    return projects
 
 async def get_project_users(project):
-    return await get_data(f'/v2/projects/{project}/projects_users', 
-            {'page[size]': 100, 'filter[campus]': campus_id,
-                'filter[marked]': 'true'})
+    return await get_data(f'/v2/projects/{project}/projects_users',
+            {'filter[campus]': campus_id, 'filter[marked]': 'true'})
 
 async def get_coalition_users(coalition):
-    async with rate_limiter:
-        r = requests.get(f'{api_url}/v2/coalitions/{coalition}/coalitions_users',
-                {'page[size]': 100}, headers = auth_header)
-    if r.status_code != 200:
-        raise Exception(f'API response: {r.status_code}')
-    pagecount = int(r.headers['X-Total'])
-    coalition_users = []
-    for n in range(1, pagecount):
-        data = await get_data(f'/v2/coalitions/{coalition}/coalitions_users',
-                {'page[size]': 100, 'page[number]': n})
-        if data == []:
-            break
-        for item in data:
-            coalition_users.append(item['user_id'])
+    if os.path.isfile(f'{coalition}.json'):
+        coalition_users = load_json_from_file(f'{coalition}.json')
+    else:
+        coalition_users = [item['user_id'] for item in await get_data(f'/v2/coalitions/{coalition}/coalitions_users')]
+        dump_json_to_file(coalition_users, f'{coalition}.json')
     return coalition_users
 
 async def get_user_locations(user):
-    async with rate_limiter:
-        r = requests.get(f'{api_url}/v2/users/{user}/locations',
-                {'page[size]': 100}, headers = auth_header)
-    if r.status_code != 200:
-        raise Exception(f'API response: {r.status_code}')
-    pagecount = int(r.headers['X-Total'])
+    data = await get_data(f'/v2/users/{user}/locations')
     logtime = {}
-    for n in range(1, pagecount):
-        data = await get_data(f'/v2/users/{user}/locations',
-                {'page[size]': 100, 'page[number]': n})
-        if data == []:
-            break
-        for item in data:
-            start = parse(item.get('begin_at'))
-            if item.get('end_at') == None:
-                end = datetime.now().replace(microsecond=0, tzinfo=tzutc())
+    for item in data:
+        start = parse(item.get('begin_at'))
+        if item.get('end_at') == None:
+            end = datetime.now().replace(microsecond=0, tzinfo=tzutc())
+        else:
+            end = parse(item.get('end_at'))
+        start2 = None
+        end2 = None
+        if end <= start:
+            continue
+        if end.day > start.day:
+            end2 = end
+            end = datetime(start.year, start.month, start.day,
+                    hour=23, minute=59, second=59, tzinfo=tzutc())
+            start2 = datetime(end2.year, end2.month, end2.day, tzinfo=tzutc())
+        duration = end - start
+        key = start.date()
+        if logtime.get(key) == None:
+            logtime[key] = (duration)
+        else:
+            logtime[key] += (duration)
+        if start2 != None:
+            duration2 = end2 - start2
+            key2 = start2.date()
+            if logtime.get(key2) == None:
+                logtime[key2] = duration2
             else:
-                end = parse(item.get('end_at'))
-            start2 = None
-            end2 = None
-            if end <= start:
-                continue
-            if end.day > start.day:
-                end2 = end
-                end = datetime(start.year, start.month, start.day,
-                        hour=23, minute=59, second=59, tzinfo=tzutc())
-                start2 = datetime(end2.year, end2.month, end2.day, tzinfo=tzutc())
-            duration = end - start
-            key = start.date()
-            if logtime.get(key) == None:
-                logtime[key] = (duration)
-            else:
-                logtime[key] += (duration)
-            if start2 != None:
-                duration2 = end2 - start2
-                key2 = start2.date()
-                if logtime.get(key2) == None:
-                    logtime[key2] = duration2
-                else:
-                    logtime[key2] += duration2
+                logtime[key2] += duration2
     return logtime
 
 async def get_week_logtime(user):
@@ -168,53 +159,40 @@ async def get_week_logtime(user):
         weektime += day
     return weektime
 
-async def get_vpc_users():
-    if os.path.isfile(velafile):
-        vela_users = load_json_from_file(velafile)
-    else:
-        vela_users = await get_coalition_users('42cursus-amsterdam-vela')
-        vela_users += await get_coalition_users('vela')
-        dump_json_to_file(vela_users, velafile)
-    if os.path.isfile(pyxisfile):
-        pyxis_users = load_json_from_file(pyxisfile)
-    else:
-        pyxis_users = await get_coalition_users('42cursus-amsterdam-pyxis')
-        pyxis_users += await get_coalition_users('pyxis')
-        dump_json_to_file(pyxis_users, pyxisfile)
-    if os.path.isfile(cetusfile):
-        cetus_users = load_json_from_file(cetusfile)
-    else:
-        cetus_users = await get_coalition_users('42cursus-amsterdam-cetus')
-        cetus_users += await get_coalition_users('cetus')
-        dump_json_to_file(cetus_users, cetusfile)
-    return vela_users, pyxis_users, cetus_users
+async def get_user_color(user_id):
+    vela_users = await get_coalition_users('42cursus-amsterdam-vela')
+    vela_users += await get_coalition_users('vela')
+    pyxis_users = await get_coalition_users('42cursus-amsterdam-pyxis')
+    pyxis_users += await get_coalition_users('pyxis')
+    cetus_users = await get_coalition_users('42cursus-amsterdam-cetus')
+    cetus_users += await get_coalition_users('cetus')
+    if user_id in vela_users:
+        return red
+    if user_id in pyxis_users:
+        return purple
+    if user_id in cetus_users:
+        return blue
+    return orange
 
 async def print_users(users_lst, scores):
     vela, pyxis, cetus = scores
-    vela_users, pyxis_users, cetus_users = await get_vpc_users()
     for user in users_lst:
-        color = white
-        if user[2] in vela_users:
-            color = red
-        if user[2] in pyxis_users:
-            color = purple
-        if user[2] in cetus_users:
-            color = blue
+        color = await get_user_color(user[2])
         if user[0] >= 100:
-            print(f'[{green}{str(user[0])}{white}] {color}{user[1]}{white}')
-            if color is red:
+            print(f'[{green}{str(user[0])}{default}] {color}{user[1]}{default}')
+            if color == red:
                 vela[0] += 1
-            if color is purple:
+            if color == purple:
                 pyxis[0] += 1
-            if color is blue:
+            if color == blue:
                 cetus[0] += 1
         else:
-            print(f'[{red}{str(user[0])}{white}] {color}{user[1]}{white}')
-            if color is red:
+            print(f'[{red}{str(user[0])}{default}] {color}{user[1]}{default}')
+            if color == red:
                 vela[1] += 1
-            if color is purple:
+            if color == purple:
                 pyxis[1] += 1
-            if color is blue:
+            if color == blue:
                 cetus[1] += 1
     return (vela, pyxis, cetus)
 
@@ -223,59 +201,53 @@ async def print_finished(project_users):
         return
     users_lst = []
     for user in project_users:
-        users_lst.append((user['final_mark'], user['user']['login'],
-            user['user']['id']))
-    users_lst = sorted(users_lst, key=lambda x: (-x[0], x[1]))
+        users_lst.append((user['final_mark'], user['user']['login'], user['user']['id']))
+    users_lst = sorted(users_lst, key=lambda user: (-user[0], user[1]))
     valid_lst = [(score, username, user_id) for (score, username, user_id) in
             users_lst if score >= 100]
     fail_lst = [(score, username, user_id) for (score, username, user_id) in
             users_lst if score < 100]
-    project_name = project_users[0]["project"]["name"]
-    width = 25 - (len(project_name) + 2)
-    print(f'({cyan}{project_name}{white}){green}{len(valid_lst):>{width}}{red}{len(fail_lst):>4d}{orange}{len(users_lst):>4d}{white}')
+    project_name = project_users[0]["project"]["slug"]
+    print(f'({cyan}{project_name}{default})')
+    print(f'{green}valid{default}: {green}{len(valid_lst):>3d} {red}fail{default}: {red}{len(fail_lst):>3d} {orange}tries{default}: {orange}{len(users_lst):>3d}{default}')
     scores = ([0, 0], [0, 0], [0, 0])
     scores = await print_users(valid_lst, scores)
     scores = await print_users(fail_lst, scores)
     for counts in scores:
         counts.append(counts[0] + counts[1])
-    print(f'\n{green}valid:\n{red}{scores[0][0]:>3d}{purple}{scores[1][0]:>3d}{blue}{scores[2][0]:>3d}{white}')
-    print(f'{red}fail:\n{red}{scores[0][1]:>3d}{purple}{scores[1][1]:>3d}{blue}{scores[2][1]:>3d}{white}')
-    print(f'{orange}total:\n{red}{scores[0][2]:>3d}{purple}{scores[1][2]:>3d}{blue}{scores[2][2]:>3d}{white}\n')
+    print(f'{green}valid{default}: {red}{scores[0][0]:>3d}{purple}{scores[1][0]:>3d}{blue}{scores[2][0]:>3d}{default}')
+    print(f'{red}fail{default}:  {red}{scores[0][1]:>3d}{purple}{scores[1][1]:>3d}{blue}{scores[2][1]:>3d}{default}')
+    print(f'{orange}tries{default}: {red}{scores[0][2]:>3d}{purple}{scores[1][2]:>3d}{blue}{scores[2][2]:>3d}{default}')
 
 async def print_projects(projects = [], cursus='42cursus'):
-    if projects != []:
-        projects = [(name, name) for name in projects]
-    else:
-        if os.path.isfile(f'{cursus}_{projectsfile}'):
-            projects = load_json_from_file(f'{cursus}_{projectsfile}')
-        else:
-            projects = await get_projects(cursus)
-            dump_json_to_file(projects, f'{cursus}_{projectsfile}')
-    for proj in projects:
-        project_users = await get_project_users(proj[1])
+    if projects == []:
+        projects = await get_projects(cursus)
+    for slug in projects:
+        project_users = await get_project_users(slug)
         if project_users == []:
-            project_name = proj[0]
-            width = 27 - (len(project_name) + 2) + 6
-            print(f'({cyan}{proj[0]}{white}){orange}{0:>{width}}{white}')
+            width = 27 - (len(slug) + 2) + 6
+            print(f'({cyan}{slug}{default})')
         await print_finished(project_users)
 
-async def print_logtime(user):
-    print(f'{orange}{user}{white} {cyan}logtime{white}:')
-    user_locations = await get_user_locations(user)
-    for key in user_locations:
-        print(f'{purple}{key}{white}: {blue}{user_locations[key]}{white}')
+async def print_logtime(users):
+    for user in users:
+        print(f'{orange}{user}{default} {cyan}logtime{default}:')
+        user_locations = await get_user_locations(user)
+        for key in user_locations:
+            print(f'{purple}{key}{default}: {blue}{user_locations[key]}{default}')
 
-async def print_weektime(user):
-    print(f'{orange}{user} {cyan}hours this week{white}:')
-    print(f'{blue}{await get_week_logtime(user)}{white}')
+async def print_weektime(users):
+    for user in users:
+        print(f'{orange}{user} {cyan}hours this week{default}:')
+        print(f'{blue}{await get_week_logtime(user)}{default}')
 
 def print_help():
-    print(f'{purple}usage{white}: {red}{sys.argv[0]} {cyan}followed by any number of the following arguments{white}')
-    print(f'{blue} -h            print help and exit{white}')
-    print(f'{blue} -c {orange}<cursus>{blue}   check who finished all projects in {orange}<cursus>{white}')
-    print(f'{blue} -p {orange}<projects>{blue} check who finished {orange}<projects>{blue} (list seperated by commas){white}')
-    print(f'{blue} -l {orange}<user>{blue}     see logtimes for {orange}<user>{white}')
-    print(f'{blue} -w {orange}<user>{blue}     see weektime for {orange}<user>{white}')
+    print(f'{purple}usage{default}: {red}{sys.argv[0]} {cyan}followed by any number of the following arguments{default}')
+    print(f'{blue} -h            print help and exit{default}')
+    print(f'{blue} -c {orange}<cursus>{blue}   check who finished all projects in {orange}<cursus>{default}')
+    print(f'{blue} -p {orange}<projects>{blue} check who finished {orange}<projects>{blue} (list seperated by commas){default}')
+    print(f'{blue} -l {orange}<user>{blue}     see logtimes for {orange}<user>{default}')
+    print(f'{blue} -w {orange}<user>{blue}     see weektime for {orange}<user>{default}')
 
 async def main(argv):
     if authed == False:
@@ -294,9 +266,9 @@ async def main(argv):
         elif opt == '-p':
             await print_projects(arg.split(','))
         elif opt == '-l':
-            await print_logtime(arg)
+            await print_logtime(arg.split(','))
         elif opt == '-w':
-            await print_weektime(arg)
+            await print_weektime(arg.split(','))
     sys.exit()
 
 if __name__ == "__main__":
