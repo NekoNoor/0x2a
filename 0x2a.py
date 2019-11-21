@@ -39,8 +39,7 @@ campus_id = 14
 defaultparams = {'page[size]': 100}
 
 auth_header = {}
-auth_data = {'grant_type': 'client_credentials', 'client_id': uid, 
-        'client_secret': secret}
+auth_data = {'grant_type': 'client_credentials', 'client_id': uid, 'client_secret': secret}
 
 if os.path.isfile(authfile):
     auth = load_json_from_file(authfile)
@@ -105,8 +104,7 @@ async def get_projects(cursus):
     return projects
 
 async def get_project_users(project):
-    return await get_data(f'/v2/projects/{project}/projects_users',
-            {'filter[campus]': campus_id, 'filter[marked]': 'true'})
+    return await get_data(f'/v2/projects/{project}/projects_users', {'filter[campus]': campus_id, 'filter[marked]': 'true'})
 
 async def get_coalition_users(coalition):
     if os.path.isfile(f'{coalition}.json'):
@@ -203,10 +201,8 @@ async def print_finished(project_users):
     for user in project_users:
         users_lst.append((user['final_mark'], user['user']['login'], user['user']['id']))
     users_lst = sorted(users_lst, key=lambda user: (-user[0], user[1]))
-    valid_lst = [(score, username, user_id) for (score, username, user_id) in
-            users_lst if score >= 100]
-    fail_lst = [(score, username, user_id) for (score, username, user_id) in
-            users_lst if score < 100]
+    valid_lst = [(score, username, user_id) for (score, username, user_id) in users_lst if score >= 100]
+    fail_lst = [(score, username, user_id) for (score, username, user_id) in users_lst if score < 100]
     project_name = project_users[0]["project"]["slug"]
     print(f'({cyan}{project_name}{default})')
     print(f'{green}valid{default}: {green}{len(valid_lst):>3d} {red}fail{default}: {red}{len(fail_lst):>3d} {orange}tries{default}: {orange}{len(users_lst):>3d}{default}')
