@@ -17,12 +17,13 @@ this is a simple tool to access the 42 api
 - get the daily logtime of a list of users
 - get the current weekly logtime of a list of users
 
-### to use:
+### usage:
 
-paste your `client_id` and `client_secret` from your application into
+- paste your `client_id` and `client_secret` from your 42 intra api keys into
 `config_example.json` and rename it to `config.json`
-
-check `./0x2a.py -h` for info on current options and usage
+- you need at least python 3 to run this application
+- install the required python modules using `pip3 install -r requirements.txt`
+- check `./0x2a.py -h` for info on current options and usage
 
 ### screenshot:
 
