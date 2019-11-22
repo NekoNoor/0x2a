@@ -213,7 +213,7 @@ async def print_finished(project_users):
         counts.append(counts[0] + counts[1])
     print(f'{green}valid{default}: {red}{scores[0][0]:>3d}{purple}{scores[1][0]:>3d}{blue}{scores[2][0]:>3d}{default}')
     print(f'{red}fail{default}:  {red}{scores[0][1]:>3d}{purple}{scores[1][1]:>3d}{blue}{scores[2][1]:>3d}{default}')
-    print(f'{orange}tries{default}: {red}{scores[0][2]:>3d}{purple}{scores[1][2]:>3d}{blue}{scores[2][2]:>3d}{default}')
+    print(f'{orange}tries{default}: {red}{scores[0][2]:>3d}{purple}{scores[1][2]:>3d}{blue}{scores[2][2]:>3d}{default}\n')
 
 async def print_projects(projects = [], cursus='42cursus'):
     if projects == []:
@@ -221,8 +221,7 @@ async def print_projects(projects = [], cursus='42cursus'):
     for slug in projects:
         project_users = await get_project_users(slug)
         if project_users == []:
-            width = 27 - (len(slug) + 2) + 6
-            print(f'({cyan}{slug}{default})')
+            print(f'({red}{slug}{default})')
         await print_finished(project_users)
 
 async def print_logtime(users):
@@ -231,11 +230,12 @@ async def print_logtime(users):
         user_locations = await get_user_locations(user)
         for key in user_locations:
             print(f'{purple}{key}{default}: {blue}{user_locations[key]}{default}')
+        print('')
 
 async def print_weektime(users):
     for user in users:
         print(f'{orange}{user} {cyan}hours this week{default}:')
-        print(f'{blue}{await get_week_logtime(user)}{default}')
+        print(f'{blue}{await get_week_logtime(user)}{default}\n')
 
 def print_help():
     print(f'{purple}usage{default}: {red}{sys.argv[0]} {cyan}followed by any number of the following arguments{default}')
