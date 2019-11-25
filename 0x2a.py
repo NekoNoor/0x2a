@@ -13,8 +13,10 @@ import json
 import sys
 import os
 
-authfile = 'auth.json'
-configfile = 'config.json'
+binpath = os.path.dirname(os.path.realpath(__file__))
+
+authfile = f'{binpath}/auth.json'
+configfile = f'{binpath}/config.json'
 
 def load_json_from_file(filename):
     f = open(filename, 'r')
@@ -96,22 +98,22 @@ async def get_data(endpoint, params = {}):
     return data_list
 
 async def get_projects(cursus):
-    if os.path.isfile(f'{cursus}_projects.json'):
-        projects = load_json_from_file(f'{cursus}_projects.json')
+    if os.path.isfile(f'{binpath}/{cursus}_projects.json'):
+        projects = load_json_from_file(f'{binpath}/{cursus}_projects.json')
     else:
         projects = [proj['slug'] for proj in await get_data(f'/v2/cursus/{cursus}/projects')]
-        dump_json_to_file(projects, f'{cursus}_projects.json')
+        dump_json_to_file(projects, f'{binpath}/{cursus}_projects.json')
     return projects
 
 async def get_project_users(project):
     return await get_data(f'/v2/projects/{project}/projects_users', {'filter[campus]': campus_id, 'filter[marked]': 'true'})
 
 async def get_coalition_users(coalition):
-    if os.path.isfile(f'{coalition}.json'):
-        coalition_users = load_json_from_file(f'{coalition}.json')
+    if os.path.isfile(f'{binpath}/{coalition}.json'):
+        coalition_users = load_json_from_file(f'{binpath}/{coalition}.json')
     else:
         coalition_users = [item['user_id'] for item in await get_data(f'/v2/coalitions/{coalition}/coalitions_users')]
-        dump_json_to_file(coalition_users, f'{coalition}.json')
+        dump_json_to_file(coalition_users, f'{binpath}/{coalition}.json')
     return coalition_users
 
 async def get_user_locations(user):
