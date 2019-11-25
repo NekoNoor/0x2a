@@ -240,7 +240,7 @@ async def print_weektime(users):
         print(f'{blue}{await get_week_logtime(user)}{default}\n')
 
 def print_help():
-    print(f'{purple}usage{default}: {red}{sys.argv[0]} {cyan}followed by any number of the following arguments{default}')
+    print(f'{purple}usage{default}: {red}{os.path.basename(sys.argv[0])} {cyan}followed by any number of the following arguments{default}')
     print(f'{blue} -h            print help and exit{default}')
     print(f'{blue} -c {orange}<cursus>{blue}   check who finished all projects in {orange}<cursus>{default}')
     print(f'{blue} -p {orange}<projects>{blue} check who finished {orange}<projects>{blue} (list seperated by commas){default}')
