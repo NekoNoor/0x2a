@@ -82,7 +82,7 @@ async def get_data(endpoint, params = {}):
     if r.status_code != 200:
         raise Exception(f'API response: {r.status_code}')
     data = json.loads(r.text)
-    pages = math.ceil(int(r.headers['X-Total']) / int(r.headers['X-Per-Page']))
+    pages = math.ceil(int(r.headers['X-Total']) / int(r.headers['X-Per-Page'])) + 1
     if pages == 1:
         return data
     data_list = [item for item in data]
