@@ -82,11 +82,11 @@ async def get_data(endpoint, params = {}):
     if r.status_code != 200:
         raise Exception(f'API response: {r.status_code}')
     data = json.loads(r.text)
-    pages = math.ceil(int(r.headers['X-Total']) / int(r.headers['X-Per-Page'])) + 1
+    pages = math.ceil(int(r.headers['X-Total']) / int(r.headers['X-Per-Page']))
     if pages == 1:
         return data
     data_list = [item for item in data]
-    for n in range(2, pages):
+    for n in range(2, pages + 1):
         params.update({'page[number]': n})
         async with rate_limiter:
             r = requests.get(f'{api_url}{endpoint}', params, headers = auth_header)
