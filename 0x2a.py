@@ -227,12 +227,14 @@ async def print_projects(projects = [], cursus='42cursus'):
         await print_finished(project_users)
 
 async def print_logtime(users):
+    total_hours = timedelta();
     for user in users:
         print(f'{orange}{user}{default} {cyan}logtime{default}:')
         user_locations = await get_user_locations(user)
         for key in user_locations:
             print(f'{purple}{key}{default}: {blue}{user_locations[key]}{default}')
-        print('')
+            total_hours += user_locations[key]
+        print(f'{cyan}total logtime:\n{orange}{total_hours}{default}\n')
 
 async def print_weektime(users):
     for user in users:
