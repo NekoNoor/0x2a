@@ -3,7 +3,7 @@
 from ratelimiter import RateLimiter
 from dateutil.parser import parse
 from dateutil.tz import tzutc
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import requests
 import asyncio
 import getopt
@@ -151,8 +151,8 @@ async def get_user_locations(user):
 
 async def get_week_logtime(user):
     logtime = await get_user_locations(user)
-    first = next(iter(logtime))
-    monday = first - timedelta(days=first.weekday())
+    today = date.today()
+    monday = today - timedelta(days=today.weekday())
     dates = [value for key, value in logtime.items() if key >= monday]
     weektime = timedelta()
     for day in dates:
