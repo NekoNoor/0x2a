@@ -117,7 +117,7 @@ async def get_coalition_users(coalition):
     return coalition_users
 
 async def get_user_locations(user):
-    data = await get_data(f'/v2/users/{user}/locations')
+    data = await get_data(f'/v2/users/{user}/locations', {'sort': 'end_at'})
     logtime = {}
     for item in data:
         start = parse(item.get('begin_at'))
@@ -238,7 +238,7 @@ async def print_logtime(users):
     for user in users:
         print(f'{orange}{user}{default} {cyan}logtime{default}:')
         user_locations = await get_user_locations(user)
-        for key in user_locations:
+        for key in sorted(user_locations.keys(), reverse=True):
             print(f'{purple}{key}{default}: {blue}{user_locations[key]}{default}')
             total_hours += user_locations[key]
         print(f'{cyan}total logtime:\n{orange}{total_hours}{default}\n')
