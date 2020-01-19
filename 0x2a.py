@@ -149,6 +149,13 @@ async def get_user_locations(user):
                 logtime[key2] += duration2
     return logtime
 
+async def get_active_users():
+    data = await get_data(f'/v2/campus/{campus_id}/locations', {'filter[active]': 'true'})
+    active_users = []
+    for active in data:
+        active_users.append((active['user']['login'], active['host'], parse(active['begin_at'])))
+    return active_users
+
 async def get_week_logtime(user):
     logtime = await get_user_locations(user)
     today = date.today()
@@ -241,6 +248,11 @@ async def print_weektime(users):
         print(f'{orange}{user} {cyan}hours this week{default}:')
         print(f'{blue}{await get_week_logtime(user)}{default}\n')
 
+async def print_active():
+    active_users = await get_active_users()
+    for user in active_users:
+        print(f'{orange}{user[0]}{blue} at {cyan}{user[1]}{blue} since {purple}{user[2]}{default}')
+
 def print_help():
     print(f'{purple}usage{default}: {red}{os.path.basename(sys.argv[0])} {cyan}followed by any number of the following arguments{default}')
     print(f'{blue} -h            print help and exit{default}')
@@ -248,12 +260,13 @@ def print_help():
     print(f'{blue} -p {orange}<projects>{blue} check who finished {orange}<projects>{blue} (list seperated by commas){default}')
     print(f'{blue} -l {orange}<users>{blue}    see logtimes for {orange}<users>{blue} (list seperated by commas){default}')
     print(f'{blue} -w {orange}<users>{blue}    see weektime for {orange}<users>{blue} (list seperated by commas){default}')
+    print(f'{blue} -a                          check who is currently logged in and where{default}')
 
 async def main(argv):
     if authed == False:
         get_auth_token()
     try:
-        opts, args = getopt.getopt(argv, "hc:p:l:w:")
+        opts, args = getopt.getopt(argv, "hc:p:l:w:a")
     except getopt.GetoptError:
         print_help()
         sys.exit(1)
@@ -269,6 +282,8 @@ async def main(argv):
             await print_logtime(arg.split(','))
         elif opt == '-w':
             await print_weektime(arg.split(','))
+        elif opt == '-a':
+            await print_active()
     sys.exit()
 
 if __name__ == "__main__":
