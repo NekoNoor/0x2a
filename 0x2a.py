@@ -122,7 +122,7 @@ async def get_user_locations(user):
     for item in data:
         start = parse(item.get('begin_at'))
         if item.get('end_at') == None:
-            end = datetime.now().replace(microsecond=0, tzinfo=tzutc())
+            end = datetime.utcnow().replace(microsecond=0, tzinfo=tzutc())
         else:
             end = parse(item.get('end_at'))
         start2 = None
@@ -152,8 +152,9 @@ async def get_user_locations(user):
 async def get_active_users():
     data = await get_data(f'/v2/campus/{campus_id}/locations', {'filter[active]': 'true'})
     active_users = []
+    now = datetime.utcnow().replace(microsecond=0, tzinfo=tzutc())
     for active in data:
-        active_users.append((active['user']['login'], active['host'], parse(active['begin_at'])))
+        active_users.append((active['user']['login'], active['host'], now - parse(active['begin_at'])))
     return active_users
 
 async def get_week_logtime(user):
@@ -251,7 +252,7 @@ async def print_weektime(users):
 async def print_active():
     active_users = await get_active_users()
     for user in active_users:
-        print(f'{orange}{user[0]}{blue} at {cyan}{user[1]}{blue} since {purple}{user[2]}{default}')
+        print(f'{orange}{user[0]}{blue} at {cyan}{user[1]}{blue} for {purple}{user[2]}{default}')
 
 def print_help():
     print(f'{purple}usage{default}: {red}{os.path.basename(sys.argv[0])} {cyan}followed by any number of the following arguments{default}')
