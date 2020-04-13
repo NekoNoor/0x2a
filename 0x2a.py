@@ -261,7 +261,7 @@ def print_help():
     print(f'{blue} -p {orange}<projects>{blue} check who finished {orange}<projects>{blue} (list seperated by commas){default}')
     print(f'{blue} -l {orange}<users>{blue}    see logtimes for {orange}<users>{blue} (list seperated by commas){default}')
     print(f'{blue} -w {orange}<users>{blue}    see weektime for {orange}<users>{blue} (list seperated by commas){default}')
-    print(f'{blue} -a                          check who is currently logged in and where{default}')
+    print(f'{blue} -a            check who is currently logged in and where{default}')
 
 async def main(argv):
     if authed == False:
